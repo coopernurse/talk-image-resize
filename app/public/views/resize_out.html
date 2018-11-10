@@ -1,0 +1,37 @@
+{{define "resize_out"}}
+<html>
+  <head>
+    <title>Image Resize Output</title>
+  </head>
+  <body>
+    <h1>Image Resize Output</h1>
+    {{range $x, $group := .outputs}}
+    <table cellspacing="10">
+      <tr>
+        <td valign="top">
+          <a href="{{$group.OrigUrl}}"><img src="{{$group.OrigUrl}}" border="0" width="400"></a>
+          <p>
+            height={{$group.OrigHeight}}
+            width={{$group.OrigWidth}}
+          </p>
+        </td>
+        {{range $z, $out := $group.Outputs}}
+        <td valign="top">
+          {{if $out.Error}}
+          <p>Error: {{$out.Error}}</p>
+          {{else}}
+          <a href="{{$out.ResizeUrl}}"><img src="{{$out.ResizeUrl}}" border="0"></a>
+          <p>
+            impl={{$out.Impl}}
+            millis={{$out.ElapsedMillis}}
+            max rss kb={{$out.MaxRSSKB}}
+          </p>
+          {{end}}
+        </td>
+        {{end}}
+      </tr>
+    </table>
+    {{end}}
+  </body>
+</html>
+{{end}}

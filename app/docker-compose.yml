@@ -1,0 +1,32 @@
+version: "3.5"
+
+services:
+
+  static:
+    image: coopernurse/img-resize
+    command: python3 -m http.server 8000
+    working_dir: /static
+    volumes:
+      - ../images:/static
+    ports:
+      - "8000:8000"
+
+  ui:
+    image: coopernurse/img-resize
+    command: /app/bin/ui
+    working_dir: /app
+    environment:
+      RESIZE_URL: http://resize:1333/resize
+    ports:
+      - "1323:1323"
+
+  resize:
+    image: coopernurse/img-resize
+    command: /app/bin/resize
+    working_dir: /app
+    ports:
+      - "1333:1333"
+    deploy:
+      resources:
+        limits:
+          memory: 10240M

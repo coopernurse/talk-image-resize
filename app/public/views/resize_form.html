@@ -1,0 +1,41 @@
+{{define "resize_form"}}
+<html>
+  <head>
+    <title>Image Resize</title>
+  </head>
+  <body>
+    <h1>Image Resize</h1>
+    
+    <form method="POST" action="resize">
+      <table cellspacing="10">
+        <tr>
+          <td align="right" valign="top">URLs:<br>one per line</td>
+          <td align="left" colspan="3">
+            <textarea name="urls" rows="10" cols="120"></textarea>
+          </td>
+        </tr>
+        <tr>
+          <td align="right">Height:</td>
+          <td align="left"><input type="text" name="height" value=""></td>
+          <td align="right">Width:</td>
+          <td align="left"><input type="text" name="width" value=""></td>          
+        </tr>
+        <tr>
+          <td align="right">Run via:</td>
+          <td colspan="3">
+            <input type="checkbox" name="docker" value="true" />Docker
+            &nbsp;&nbsp;
+            <input type="checkbox" name="lambda" value="true" />AWS Lambda
+          </td>
+        </tr>
+        <tr>
+          <td></td>
+          <td colspan="3">
+            <input type="submit" value="Resize">
+          </td>
+        </tr>
+      </table>
+    </form>
+  </body>
+</html>
+{{end}}
