@@ -32,3 +32,4 @@ else
         --function-name "$func_name" \
         --zip-file "fileb://lambda.zip"
 fi
+rm -f lambda.zip
