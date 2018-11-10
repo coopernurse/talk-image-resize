@@ -1,0 +1,7 @@
+out
+lambda/lambda.zip
+lambda/node_modules
+app/cmd/resize
+app/cmd/ui
+app/cmd/output
+gotchas

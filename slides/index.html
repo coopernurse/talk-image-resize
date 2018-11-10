@@ -1,0 +1,366 @@
+<!doctype html>
+<html>
+  <head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+	<title>Robust Image Resizing</title>
+
+	<link rel="stylesheet" href="css/reveal.css">
+	<link rel="stylesheet" href="css/theme/sky.css">
+
+	<!-- Theme used for syntax highlighting of code -->
+	<link rel="stylesheet" href="lib/css/zenburn.css">
+
+	<!-- Printing and PDF exports -->
+	<script>
+	  var link = document.createElement( 'link' );
+	  link.rel = 'stylesheet';
+	  link.type = 'text/css';
+	  link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+	  document.getElementsByTagName( 'head' )[0].appendChild( link );
+	</script>
+    <style>
+      .reveal .footer {
+          position: absolute;
+          bottom: 1em;
+          left: 1em;
+          font-size: 0.5em;
+      }
+    </style>
+  </head>
+  <body>
+	<div class="reveal">
+      <div class="footer">
+        <!-- <img src="images/output.png"> -->
+        https://github.com/coopernurse/talk-image-resize/
+      </div>
+      
+	  <div class="slides">
+		<section>
+          <h2>Robust Image Resizing</h2>
+
+          <p>James Cooper - james@bitmechanic.com</p>
+          <p><a href="http://www.bitmechanic.com/">http://www.bitmechanic.com/</a></p>
+          <p><a href="https://github.com/coopernurse/">https://github.com/coopernurse/</a></p>
+        </section>
+
+        <section>
+          <h2>Agenda</h2>
+
+          <p style="text-align: left;">
+            Goal: Provide an overview of common resize tools and
+            issues you might run into in the wild
+          </p>
+          
+          <ul>
+            <li>Resize Tools</li>
+            <li>Performance / memory usage</li>
+            <li>Gotchas</li>
+            <li>AWS Lambda / VIPS</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>Disclaimers</h2>
+
+          <ul>
+            <li>This is a big topic</li>
+            <li>I'm not an expert</li>
+            <li>Corrections welcomed</li>
+          </ul>
+        </section>
+        
+        <section>
+          <h2>Resize Tools</h2>
+
+          <p style="text-align: left;">
+          Open source tools that support a wide range of
+          image formats and resize / crop / transform options.
+          </p>
+          
+          <ul>
+            <li>ImageMagick</li>
+            <li>GraphicsMagick</li>
+            <li>VIPS</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>ImageMagick</h2>
+
+          <p style="text-align: left;">
+          Perhaps the most well known resize tool.
+          Provides 11+ commands including "identify" and "convert"
+          </p>
+          
+          <ul>
+            <li><a href="https://en.wikipedia.org/wiki/ImageMagick">https://en.wikipedia.org/wiki/ImageMagick</a></li>
+            <li>1987 by John Cristy while at DuPont</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>GraphicsMagick</h2>
+
+          <ul>
+            <li><a href="https://en.wikipedia.org/wiki/GraphicsMagick">https://en.wikipedia.org/wiki/GraphicsMagick</a></li>
+            <li>Fork of ImageMagick 5.5.2 in 2002</li>
+            <li>Single "gm" binary with subcommands</li>
+            <li>Many commands use the same option flags as ImageMagick</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>VIPS</h2>
+
+          <ul>
+            <li><a href="https://en.wikipedia.org/wiki/VIPS_(software)">https://en.wikipedia.org/wiki/VIPS_(software)</a></li>
+            <li>Originated from an EU funded project in the early 1990s (Birkbeck College and National Gallery London)</li>
+            <li>Provides C library (libvips) as well as several CLI tools</li>
+            <li>Designed to handle very large images</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>Performance</h2>
+
+          <ul>
+            <li>Execution time</li>
+            <li>Max RAM used</li>
+            <li>Relationship to input image size</li>
+            <li>(see demo)</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>Perf Conclusions</h2>
+
+          <ul>
+            <li>VIPS has constant RAM usage</li>
+            <li>IM and GM do not</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>Concurrency and Isolation</h2>
+
+          <ul>
+            <li>Isolate resize code from other services</li>
+            <li>Pathological case won't cause collateral damage</li>
+            <li>Use docker resource limits or 'serverless' platforms</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>Other Gotchas</h2>
+
+          <ul>
+            <li>EXIF Orientation</li>
+            <li>Multi-frame images</li>
+            <li>Color profiles (CMYK -> RGB)</li>
+            <li>EXIF metadata stripping</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>EXIF Orientation</h2>
+
+          <img src="exif_orient.png" height="400">
+        </section>
+
+        <section>
+          <h2>EXIF Orientation</h2>
+          <img src="exif_crop/elvis.jpg" height="200">
+          <br/>vs:<br/>
+          <img src="exif_crop/elvis.jpg" height="200" style="image-orientation: from-image;">
+        </section>
+
+        <section>
+          <h2>EXIF Orientation</h2>
+
+          <pre><code data-trim class="bash">
+              $ exiftool -D -n elvis.jpg | grep -i orient
+              274 Orientation                     : 8
+              143 Camera Orientation              : 0
+          </code></pre>
+
+          <pre><code data-trim class="html">
+              &lt;img src="exif_crop/elvis.jpg" height="200"
+                   style="image-orientation: from-image;"&gt;
+          </code></pre>
+        </section>
+
+        <section>
+          <h2>Cropping Gotcha</h2>
+
+          <pre><code data-trim class="bash" style="font-size: 16px;">
+          # actual image geometry is width=4000, height=3000
+          $ gm identify elvis.jpg 
+          elvis.jpg JPEG 4000x3000+0+0 DirectClass 8-bit 4.8Mi 0.000u 0m:0.000003s
+          
+          # -crop &lt;width&gt;x&lt;height&gt;{+-}&lt;x&gt;{+-}&lt;y&gt;{%}
+          # The width and height give the size of the image that remains after cropping,
+          # and x and y are offsets that give the location of the top left corner of the
+          # cropped image with respect to the original image. 
+          $ gm convert elvis.jpg -crop 1000x1600+700+250 cropped_wrong.jpg
+          
+          # use -auto-orient to apply exif orientation before cropping
+          $ gm convert elvis.jpg -auto-orient -crop 1000x1600+700+250 cropped_right.jpg
+          </code></pre>
+
+          <pre><code data-trim class="bash" style="font-size: 16px;">
+          # HARD WAY - preserve exif orientation
+          # reverse the target width/height (1000x1600 -> 1600x1000)
+          # x offset: 4000-1600-250 => 2150,  y offset stays => 700
+          $ gm convert elvis.jpg -crop 1600x1000+2150+700 cropped_right_hard.jpg
+          </code></pre>
+        </section>
+
+        <section>
+          <h2>Cropping Gotcha</h2>
+
+          <table>
+            <tr>
+              <td valign="top">
+                <img src="exif_crop/cropped_wrong.jpg" height="200">
+                <br/>
+                Wrong
+              </td>
+              <td valign="top">
+                <img src="exif_crop/cropped_right.jpg" height="200" style="image-orientation: from-image;">
+                <br/>
+                Right
+              </td>
+            </tr>
+          </table>
+        </section>
+
+        <section>
+          <h2>Multi-frame images</h2>
+
+          <pre><code data-trim class="bash" style="font-size: 18px;">
+          # will create a separate jpeg per frame in GIF
+          # also takes over a minute to run
+          convert 'large_plankton.gif' -size 1000x1000 plankton.jpg
+
+          # wrong - crashes
+          convert 'large_tiff.tiff' -size 1000x1000 large_tiff.jpg
+
+          # right (assuming you want the first frame)
+          convert 'large_plankton.gif[0]' -size 1000x1000 plankton.jpg
+          convert 'large_tiff.tiff[0]' -size 1000x1000 large_tiff.jpg
+          </code></pre>
+          
+        </section>
+
+        <section>
+          <h2>Color Space Gotchas</h2>
+
+          <ul>
+            <li>CMYK vs RGB</li>
+            <li>See: <a href="https://en.wikipedia.org/wiki/Color_space">https://en.wikipedia.org/wiki/Color_space</a></li>
+            <li>Relevant if you're resizing for print</li>
+            <li>(see example)</li>
+          </ul>
+
+        </section>
+
+        <section>
+          <h2>VIPS and Color Space</h2>
+
+          <ul>
+            <li>No default ICC profile in the vips CLI tools</li>
+            <li>The sharp nodejs lib provides one</li>
+            <li>Good description: <a href="https://github.com/lovell/sharp/issues/99">https://github.com/lovell/sharp/issues/99</a></li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>Demo: VIPS on AWS Lambda</h2>
+
+          <ul>
+            <li>Uses sharp node.js package, which wraps libvips</li>
+            <li>Credits: <a href="https://github.com/dioptre/lampic">https://github.com/dioptre/lampic</a></li>
+            <li>Hacked to fetch single image, resize, store output to S3</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>Invoke Example</h2>
+
+          <pre><code data-trim class="python" style="font-size: 16px;">
+          #!/usr/bin/env python3
+          import boto3, json
+
+          orig_urls = [
+              "http://bitmech-west2.s3.amazonaws.com/resize-images/1_Wild_Turkey.jpg",
+              "http://bitmech-west2.s3.amazonaws.com/resize-images/ContinentalDC-10-30.jpg",
+              "http://bitmech-west2.s3.amazonaws.com/resize-images/P1030659.JPG"
+          ]
+          lam = boto3.client("lambda")
+          for url in orig_urls:
+              d = {"url": url, "height": 300}
+              resp = lam.invoke(FunctionName="image-resize", InvocationType="RequestResponse",
+                                Payload=json.dumps(d))
+              out = json.loads(resp["Payload"].read())
+              print("%s to %s (%d ms)" % (url, out["resizeUrl"], out["elapsedMillis"]))
+          </code></pre>
+        </section>
+
+        <section>
+          <h2>Performance / Cost</h2>
+
+          <ul>
+            <li>Using a 512MB RAM config</li>
+            <li>12MP image -> about 500ms each (including download/upload time)</li>
+            <li>1 million requests -> $4.17</li>
+            <li>Only pay for what you use, service is autoscaled</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>Summary / Suggestions</h2>
+
+          <ul>
+            <li>Isolate resize tasks to separate VM / container / lambda</li>
+            <li>Use VIPS when possible to bound RAM usage</li>
+            <li>Make sure to handle EXIF orientation if you're cropping or rotating</li>
+          </ul>
+        </section>
+        
+        <section>
+          <h2>Thank You!</h2>
+
+          <p>James Cooper - james@bitmechanic.com</p>
+          <p><a href="http://www.bitmechanic.com/">http://www.bitmechanic.com/</a></p>
+          <p><a href="https://github.com/coopernurse/">https://github.com/coopernurse/</a></p>          
+        </section>
+        
+	  </div>
+	</div>
+
+	<script src="lib/js/head.min.js"></script>
+	<script src="js/reveal.js"></script>
+
+	<script>
+	  // More info about config & dependencies:
+	  // - https://github.com/hakimel/reveal.js#configuration
+	  // - https://github.com/hakimel/reveal.js#dependencies
+      Reveal.initialize({
+		  dependencies: [
+			  { src: 'plugin/markdown/marked.js' },
+			  { src: 'plugin/markdown/markdown.js' },
+			  { src: 'plugin/notes/notes.js', async: true },
+			  { src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } }
+		  ]
+	  });
+      Reveal.configure({
+          keyboard: {
+              40: 'next',
+              38: 'prev'
+          }
+      });      
+	</script>
+  </body>
+</html>
