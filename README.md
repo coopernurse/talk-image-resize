@@ -15,6 +15,12 @@ Make sure you have docker installed.
 cd app
 ./build.sh
 
+# create an images dir - 
+mkdir ../images
+
+# copy some images into there -- they'll be 
+# visible via the http://static:3000/ url..
+
 # run using swarm mode
 docker stack deploy -c docker-compose.yml resize
 
